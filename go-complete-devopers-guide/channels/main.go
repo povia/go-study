@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
+	"time"
 )
 
 func main() {
@@ -20,17 +20,25 @@ func main() {
 		go CheckLink(link, c)
 	}
 
-	fmt.Println(<-c)
+	// c 에 response 가 존재하는 동안에는 계속해서 for loop 가 작동한다.
+	for l := range c {
+		// func literal 을 통해 5초를 쉰 후 CheckLink 를 호출한다.
+		go func(link string) {
+			time.Sleep(5 * time.Second)
+			CheckLink(link, c)
+		}(l) // function literal 에 전달하기 위한 인자 (link 에 매핑됨)
+	}
 }
 
 func CheckLink(link string, c chan string) {
 	_, err := http.Get(link)
 	if err != nil {
 		fmt.Println(link, "might be down!")
-		c <- "Might be down I think"
-		os.Exit(1)
+		c <- link
+		return
 
 	}
-	c <- "Yep its up"
+
 	fmt.Println(link, "might be up!")
+	c <- link
 }
